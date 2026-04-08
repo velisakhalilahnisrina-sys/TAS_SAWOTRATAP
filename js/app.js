@@ -102,13 +102,25 @@ function formatPrice(price) {
   return numeric ? `Rp${Number(numeric).toLocaleString('id-ID')}` : 'Rp0';
 }
 
+function convertGoogleDriveLink(url) {
+  if (!url) return 'https://via.placeholder.com/400x266?text=Foto+Produk';
+  
+  // Jika link Google Drive, konversi ke format direct view
+  const driveMatch = url.match(/\/d\/([a-zA-Z0-9-_]+)/);
+  if (driveMatch) {
+    return `https://drive.google.com/uc?export=view&id=${driveMatch[1]}`;
+  }
+  
+  return url;
+}
+
 function renderProducts() {
   productList.innerHTML = '';
   products.forEach((product) => {
     const card = document.createElement('article');
     card.className = 'card';
     card.innerHTML = `
-      <img src="${product.foto_url}" alt="${product.nama_produk}" loading="lazy" />
+      <img src="${convertGoogleDriveLink(product.foto_url)}" alt="${product.nama_produk}" loading="lazy" />
       <div class="card-body">
         <h3>${product.nama_produk}</h3>
         <p class="card-subtitle">${product.kategori} • ${product.sekolah}</p>
@@ -149,7 +161,7 @@ function getMitraName(id) {
 function showProductDetail(productId) {
   const product = products.find((item) => item.product_id === productId);
   if (!product) return;
-  detailImage.src = product.foto_url;
+  detailImage.src = convertGoogleDriveLink(product.foto_url);
   detailImage.alt = product.nama_produk;
   detailCategory.textContent = product.kategori;
   detailName.textContent = product.nama_produk;
