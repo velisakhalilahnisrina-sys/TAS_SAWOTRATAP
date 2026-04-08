@@ -50,6 +50,8 @@ async function loadDataFromJSON() {
     products = await productsRes.json();
     mitras = await mitrasRes.json();
 
+    console.log('✅ Data dimuat:', products.length, 'produk,', mitras.length, 'mitra');
+
     products = products.map((p) => ({
       ...p,
       deskripsi: p.deskripsi || `Produk ${p.nama_produk} dari Warung Bu Tutut.`,
@@ -59,7 +61,7 @@ async function loadDataFromJSON() {
       mitras = [defaultMitra];
     }
   } catch (err) {
-    console.warn('Gagal memuat JSON, gunakan data lokal:', err);
+    console.warn('⚠️ Gagal memuat JSON, gunakan data lokal:', err);
     products = getStoredData('warungProducts', []);
     mitras = getStoredData('warungMitras', [defaultMitra]);
   }
@@ -103,12 +105,14 @@ function formatPrice(price) {
 }
 
 function convertGoogleDriveLink(url) {
-  if (!url) return 'https://via.placeholder.com/400x266?text=Foto+Produk';
+  if (!url) return 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="400" height="266"%3E%3Crect fill="%23f0e6d2" width="400" height="266"/%3E%3Ctext x="50%25" y="50%25" font-size="18" fill="%236f4327" text-anchor="middle" dy=".3em"%3EFoto Produk%3C/text%3E%3C/svg%3E';
   
   // Jika link Google Drive, konversi ke format direct view
   const driveMatch = url.match(/\/d\/([a-zA-Z0-9-_]+)/);
   if (driveMatch) {
-    return `https://drive.google.com/uc?export=view&id=${driveMatch[1]}`;
+    const fileId = driveMatch[1];
+    // Gunakan jdenticon atau placeholder lain jika Google Drive tidak bisa
+    return `https://drive.google.com/uc?export=view&id=${fileId}&timestamp=${Date.now()}`;
   }
   
   return url;
@@ -119,8 +123,9 @@ function renderProducts() {
   products.forEach((product) => {
     const card = document.createElement('article');
     card.className = 'card';
+    const imgUrl = convertGoogleDriveLink(product.foto_url);
     card.innerHTML = `
-      <img src="${convertGoogleDriveLink(product.foto_url)}" alt="${product.nama_produk}" loading="lazy" />
+      <img src="${imgUrl}" alt="${product.nama_produk}" loading="lazy" />
       <div class="card-body">
         <h3>${product.nama_produk}</h3>
         <p class="card-subtitle">${product.kategori} • ${product.sekolah}</p>
@@ -130,6 +135,11 @@ function renderProducts() {
         </div>
       </div>
     `;
+    const img = card.querySelector('img');
+    img.onerror = function() {
+      this.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="400" height="266"%3E%3Crect fill="%23f0e6d2" width="400" height="266"/%3E%3Ctext x="50%25" y="50%25" font-size="16" fill="%236f4327" text-anchor="middle" dy=".3em"%3EGambar tidak tersedia%3C/text%3E%3C/svg%3E';
+      console.warn('Gambar gagal dimuat:', product.nama_produk);
+    };
     const button = card.querySelector('button');
     button.addEventListener('click', () => showProductDetail(product.product_id));
     productList.appendChild(card);
@@ -161,8 +171,12 @@ function getMitraName(id) {
 function showProductDetail(productId) {
   const product = products.find((item) => item.product_id === productId);
   if (!product) return;
-  detailImage.src = convertGoogleDriveLink(product.foto_url);
+  const imgUrl = convertGoogleDriveLink(product.foto_url);
+  detailImage.src = imgUrl;
   detailImage.alt = product.nama_produk;
+  detailImage.onerror = function() {
+    this.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="400" height="300"%3E%3Crect fill="%23f0e6d2" width="400" height="300"/%3E%3Ctext x="50%25" y="50%25" font-size="18" fill="%236f4327" text-anchor="middle" dy=".3em"%3EGambar tidak tersedia%3C/text%3E%3C/svg%3E';
+  };
   detailCategory.textContent = product.kategori;
   detailName.textContent = product.nama_produk;
   detailPrice.textContent = formatPrice(product.harga);
