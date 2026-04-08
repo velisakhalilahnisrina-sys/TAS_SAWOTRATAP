@@ -38,41 +38,32 @@ const defaultMitra = {
   sekolah: 'SMA HANG TUAH 2 SIDOARJO',
 };
 
-const defaultProducts = [
-  {
-    product_id: '008ab3f2-8492-4963-81da-fca10c27baee',
-    mitra_id: '079c2f92-564f-49a1-8768-cc7c59c58e2b',
-    nama_produk: 'Es Teh Manis',
-    harga: '3.000',
-    stok: '20',
-    kategori: 'Minuman',
-    foto_url: 'https://images.unsplash.com/photo-1544025162-58ec5c3a7f3a?auto=format&fit=crop&w=800&q=80',
-    sekolah: 'SMA HANG TUAH 2 SIDOARJO',
-    deskripsi: 'Minuman segar manis khas warung dengan es teh pilihan.',
-  },
-  {
-    product_id: '02885576-08e8-46d6-abec-6d6ae6bad1bc',
-    mitra_id: '2a12fcc2-92e2-4eee-a974-36b55014d0a2',
-    nama_produk: 'Nasi Goreng',
-    harga: '12.000',
-    stok: '15',
-    kategori: 'Makanan',
-    foto_url: 'https://images.unsplash.com/photo-1604908176821-5c4b41bfa4e6?auto=format&fit=crop&w=800&q=80',
-    sekolah: 'SMA HANG TUAH 2 SIDOARJO',
-    deskripsi: 'Nasi goreng lezat dengan sayuran dan telur, cocok untuk sarapan atau makan siang cepat.',
-  },
-  {
-    product_id: '2db8f790-a746-46da-a625-c77495cb5f77',
-    mitra_id: '1597bbb4-52df-406d-ae69-0a9e105bedf1',
-    nama_produk: 'Batagor',
-    harga: '10.000',
-    stok: '30',
-    kategori: 'Makanan',
-    foto_url: 'https://images.unsplash.com/photo-1600891964599-f61ba0e24092?auto=format&fit=crop&w=800&q=80',
-    sekolah: 'SMA HANG TUAH 2 SIDOARJO',
-    deskripsi: 'Batagor panas dengan saus kacang gurih, favorit pelajar dan warga sekitar.',
-  },
-];
+async function loadDataFromJSON() {
+  try {
+    const [productsRes, mitrasRes] = await Promise.all([
+      fetch('DATA/tabel_product_rows.json'),
+      fetch('DATA/tabel_mitra_rows.json'),
+    ]);
+
+    if (!productsRes.ok || !mitrasRes.ok) throw new Error('Failed to load data');
+
+    products = await productsRes.json();
+    mitras = await mitrasRes.json();
+
+    products = products.map((p) => ({
+      ...p,
+      deskripsi: p.deskripsi || `Produk ${p.nama_produk} dari Warung Bu Tutut.`,
+    }));
+
+    if (mitras.length === 0) {
+      mitras = [defaultMitra];
+    }
+  } catch (err) {
+    console.warn('Gagal memuat JSON, gunakan data lokal:', err);
+    products = getStoredData('warungProducts', []);
+    mitras = getStoredData('warungMitras', [defaultMitra]);
+  }
+}
 
 function getStoredData(key, fallback) {
   try {
@@ -256,7 +247,7 @@ function addMitra(event) {
 
 function initData() {
   mitras = getStoredData('warungMitras', [defaultMitra]);
-  products = getStoredData('warungProducts', defaultProducts);
+  products = getStoredData('warungProducts', []);
 }
 
 function initEvents() {
@@ -268,8 +259,9 @@ function initEvents() {
   mitraForm.addEventListener('submit', addMitra);
 }
 
-function initApp() {
+async function initApp() {
   initData();
+  await loadDataFromJSON();
   renderProducts();
   renderMitras();
   renderAdminLists();
