@@ -107,14 +107,23 @@ function formatPrice(price) {
 function convertGoogleDriveLink(url) {
   if (!url) return 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="400" height="266"%3E%3Crect fill="%23f0e6d2" width="400" height="266"/%3E%3Ctext x="50%25" y="50%25" font-size="18" fill="%236f4327" text-anchor="middle" dy=".3em"%3EFoto Produk%3C/text%3E%3C/svg%3E';
   
-  // Jika link Google Drive, konversi ke format direct view
-  const driveMatch = url.match(/\/d\/([a-zA-Z0-9-_]+)/);
-  if (driveMatch) {
-    const fileId = driveMatch[1];
-    // Gunakan jdenticon atau placeholder lain jika Google Drive tidak bisa
-    return `https://drive.google.com/uc?export=view&id=${fileId}&timestamp=${Date.now()}`;
+  // Step 1: Cari ID dari berbagai format Google Drive URL
+  let fileId = null;
+  
+  // Format: /d/ID/ atau /id=ID
+  const match1 = url.match(/\/d\/([a-zA-Z0-9-_]+)/);
+  if (match1) fileId = match1[1];
+  
+  // Format: id=ID
+  const match2 = url.match(/[?&]id=([a-zA-Z0-9-_]+)/);
+  if (match2 && !fileId) fileId = match2[1];
+  
+  if (fileId) {
+    console.log('📸 Loading gambar dengan ID:', fileId);
+    return `https://lh3.googleusercontent.com/uc?export=view&id=${fileId}`;
   }
   
+  console.warn('⚠️ URL tidak valid:', url);
   return url;
 }
 
