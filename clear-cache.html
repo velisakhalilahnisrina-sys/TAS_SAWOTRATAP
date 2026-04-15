@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Clear Cache</title>
+</head>
+<body>
+  <h1>Clearing cache...</h1>
+  <script>
+    localStorage.clear();
+    sessionStorage.clear();
+    console.log('✅ Cache cleared!');
+    alert('✅ Cache cleared! Redirecting to app...');
+    window.location.href = 'index.html';
+  </script>
+</body>
+</html>
