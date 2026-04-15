@@ -137,7 +137,7 @@ function convertGoogleDriveLink(url) {
   
   if (fileId) {
     console.log('📸 Loading gambar dengan ID:', fileId);
-    return `https://lh3.googleusercontent.com/uc?export=view&id=${fileId}`;
+    return `https://lh3.googleusercontent.com/id/${fileId}`;
   }
   
   // Jika URL tidak cocok, cek apakah sudah dalam format lh3
