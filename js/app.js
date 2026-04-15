@@ -41,7 +41,7 @@ const defaultMitra = {
 async function loadDataFromJSON() {
   try {
     const [productsRes, mitrasRes] = await Promise.all([
-      fetch('DATA/tabel_product_rows.json'),
+      fetch('DATA/tabel_product_rows-2.json'),
       fetch('DATA/tabel_mitra_rows.json'),
     ]);
 
