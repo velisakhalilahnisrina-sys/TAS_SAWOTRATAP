@@ -105,7 +105,7 @@ function formatPrice(price) {
 }
 
 function convertGoogleDriveLink(url) {
-  if (!url) return 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="400" height="266"%3E%3Crect fill="%23f0e6d2" width="400" height="266"/%3E%3Ctext x="50%25" y="50%25" font-size="18" fill="%236f4327" text-anchor="middle" dy=".3em"%3EFoto Produk%3C/text%3E%3C/svg%3E';
+  if (!url || typeof url !== 'string') return 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="400" height="266"%3E%3Crect fill="%23f0e6d2" width="400" height="266"/%3E%3Ctext x="50%25" y="50%25" font-size="18" fill="%236f4327" text-anchor="middle" dy=".3em"%3EFoto Produk%3C/text%3E%3C/svg%3E';
   
   // Step 1: Cari ID dari berbagai format Google Drive URL
   let fileId = null;
@@ -121,6 +121,11 @@ function convertGoogleDriveLink(url) {
   if (fileId) {
     console.log('📸 Loading gambar dengan ID:', fileId);
     return `https://lh3.googleusercontent.com/uc?export=view&id=${fileId}`;
+  }
+  
+  // Jika URL tidak cocok, cek apakah sudah dalam format lh3
+  if (url.includes('lh3.googleusercontent.com')) {
+    return url;
   }
   
   console.warn('⚠️ URL tidak valid:', url);
@@ -174,7 +179,7 @@ function renderMitras() {
 
 function getMitraName(id) {
   const mitra = mitras.find((item) => item.mitra_id === id);
-  return mitra ? mitra.nama_mitra : 'Mitra tidak diketahui';
+  return mitra ? mitra.nama_mitra : 'Mitra Tak Diketahui';
 }
 
 function showProductDetail(productId) {
@@ -196,6 +201,8 @@ function showProductDetail(productId) {
 }
 
 function renderAdminLists() {
+  if (!productMitraSelect) return;
+  
   productMitraSelect.innerHTML = '';
   mitras.forEach((mitra) => {
     const option = document.createElement('option');
@@ -204,33 +211,40 @@ function renderAdminLists() {
     productMitraSelect.appendChild(option);
   });
 
-  adminProducts.innerHTML = '';
-  products.forEach((product) => {
-    const item = document.createElement('div');
-    item.className = 'admin-list-item';
-    item.innerHTML = `
-      <h4>${product.nama_produk}</h4>
-      <p>${formatPrice(product.harga)} • ${product.kategori}</p>
-      <div class="admin-actions">
-        <button class="button button-secondary" data-action="edit" data-id="${product.product_id}">Edit</button>
-        <button class="button button-secondary" data-action="delete" data-id="${product.product_id}">Hapus</button>
-      </div>
-    `;
-    item.querySelector('[data-action="delete"]').addEventListener('click', () => deleteProduct(product.product_id));
-    adminProducts.appendChild(item);
-  });
+  if (adminProducts) {
+    adminProducts.innerHTML = '';
+    products.forEach((product) => {
+      const item = document.createElement('div');
+      item.className = 'admin-list-item';
+      item.innerHTML = `
+        <h4>${product.nama_produk}</h4>
+        <p>${formatPrice(product.harga)} • ${product.kategori}</p>
+        <div class="admin-actions">
+          <button class="button button-secondary" data-action="edit" data-id="${product.product_id}">Edit</button>
+          <button class="button button-secondary" data-action="delete" data-id="${product.product_id}">Hapus</button>
+        </div>
+      `;
+      const editBtn = item.querySelector('[data-action="edit"]');
+      const deleteBtn = item.querySelector('[data-action="delete"]');
+      if (editBtn) editBtn.addEventListener('click', () => editProduct(product.product_id));
+      if (deleteBtn) deleteBtn.addEventListener('click', () => deleteProduct(product.product_id));
+      adminProducts.appendChild(item);
+    });
+  }
 
-  adminMitras.innerHTML = '';
-  mitras.forEach((mitra) => {
-    const item = document.createElement('div');
-    item.className = 'admin-list-item';
-    item.innerHTML = `
-      <h4>${mitra.nama_mitra}</h4>
-      <p>${mitra.kategori}</p>
-      <p>${mitra.alamat}</p>
-    `;
-    adminMitras.appendChild(item);
-  });
+  if (adminMitras) {
+    adminMitras.innerHTML = '';
+    mitras.forEach((mitra) => {
+      const item = document.createElement('div');
+      item.className = 'admin-list-item';
+      item.innerHTML = `
+        <h4>${mitra.nama_mitra}</h4>
+        <p>${mitra.kategori}</p>
+        <p>${mitra.alamat}</p>
+      `;
+      adminMitras.appendChild(item);
+    });
+  }
 }
 
 function deleteProduct(productId) {
@@ -240,20 +254,66 @@ function deleteProduct(productId) {
   renderAdminLists();
 }
 
+function editProduct(productId) {
+  const product = products.find((p) => p.product_id === productId);
+  if (!product) return;
+  
+  document.getElementById('productName').value = product.nama_produk;
+  document.getElementById('productPrice').value = product.harga;
+  document.getElementById('productStock').value = product.stok;
+  document.getElementById('productCategory').value = product.kategori;
+  document.getElementById('productPhoto').value = product.foto_url;
+  document.getElementById('productSchool').value = product.sekolah;
+  productMitraSelect.value = product.mitra_id;
+  
+  productForm.dataset.editId = productId;
+  productForm.querySelector('button[type="submit"]').textContent = 'Perbarui Produk';
+  
+  showSection('admin');
+}
+
 function addProduct(event) {
   event.preventDefault();
-  const newProduct = {
-    product_id: crypto.randomUUID(),
+  
+  const editId = productForm.dataset.editId;
+  const productName = document.getElementById('productName').value.trim();
+  const productPrice = document.getElementById('productPrice').value.trim();
+  const productStock = document.getElementById('productStock').value.trim();
+  
+  // Validation
+  if (!productName || !productPrice || !productStock) {
+    alert('Harap isi semua field yang wajib');
+    return;
+  }
+  
+  const productData = {
     mitra_id: productMitraSelect.value || defaultMitra.mitra_id,
-    nama_produk: document.getElementById('productName').value.trim(),
-    harga: document.getElementById('productPrice').value.trim(),
-    stok: document.getElementById('productStock').value.trim(),
+    nama_produk: productName,
+    harga: productPrice,
+    stok: productStock,
     kategori: document.getElementById('productCategory').value.trim(),
     foto_url: document.getElementById('productPhoto').value.trim(),
     sekolah: document.getElementById('productSchool').value.trim(),
-    deskripsi: `Produk ${document.getElementById('productName').value.trim()} dari Warung Bu Tutut.`,
+    deskripsi: `Produk ${productName} dari Warung Bu Tutut.`,
   };
-  products.unshift(newProduct);
+
+  if (editId) {
+    // Update existing product
+    const productIndex = products.findIndex((p) => p.product_id === editId);
+    if (productIndex !== -1) {
+      products[productIndex] = { ...products[productIndex], ...productData };
+    }
+    delete productForm.dataset.editId;
+    productForm.querySelector('button[type="submit"]').textContent = 'Simpan Produk';
+  } else {
+    // Add new product
+    const newProduct = {
+      product_id: crypto.randomUUID(),
+      ...productData,
+    };
+    products.unshift(newProduct);
+  }
+  
   storeData('warungProducts', products);
   productForm.reset();
   renderProducts();
@@ -263,13 +323,25 @@ function addProduct(event) {
 
 function addMitra(event) {
   event.preventDefault();
+  
+  const mitraName = document.getElementById('mitraName').value.trim();
+  const mitraEmail = document.getElementById('mitraEmail').value.trim();
+  const mitraAddress = document.getElementById('mitraAddress').value.trim();
+  const mitraDesc = document.getElementById('mitraDesc').value.trim();
+  
+  // Validation
+  if (!mitraName || !mitraEmail || !mitraAddress || !mitraDesc) {
+    alert('Harap isi semua field yang wajib');
+    return;
+  }
+  
   const newMitra = {
     mitra_id: crypto.randomUUID(),
-    nama_mitra: document.getElementById('mitraName').value.trim(),
+    nama_mitra: mitraName,
     owner_name: '',
-    email: document.getElementById('mitraEmail').value.trim(),
-    alamat: document.getElementById('mitraAddress').value.trim(),
-    kategori: document.getElementById('mitraDesc').value.trim(),
+    email: mitraEmail,
+    alamat: mitraAddress,
+    kategori: mitraDesc,
     sekolah: '',
   };
   mitras.unshift(newMitra);
@@ -289,9 +361,15 @@ function initEvents() {
   navButtons.forEach((button) => {
     button.addEventListener('click', () => showSection(button.dataset.section));
   });
-  backButton.addEventListener('click', () => showSection('products'));
-  productForm.addEventListener('submit', addProduct);
-  mitraForm.addEventListener('submit', addMitra);
+  if (backButton) {
+    backButton.addEventListener('click', () => showSection('products'));
+  }
+  if (productForm) {
+    productForm.addEventListener('submit', addProduct);
+  }
+  if (mitraForm) {
+    mitraForm.addEventListener('submit', addMitra);
+  }
 }
 
 async function initApp() {
